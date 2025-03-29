@@ -1,5 +1,6 @@
 import { promises as fs } from "fs";
 import path from "path";
+import { SKIP_CACHE } from "./settings";
 
 const CACHE_DIR = path.resolve(path.dirname(new URL(import.meta.url).pathname), "cache");
 
@@ -16,6 +17,10 @@ const getCacheFilePath = (key: string): string => {
 };
 
 export const getCachedData = async (key: string): Promise<any | null> => {
+  if (SKIP_CACHE) {
+    return null;
+  }
+
   const filePath = getCacheFilePath(key);
   try {
     const data = await fs.readFile(filePath, "utf-8");
@@ -27,6 +32,10 @@ export const getCachedData = async (key: string): Promise<any | null> => {
 };
 
 export const saveToCache = async (key: string, data: any): Promise<void> => {
+  if (SKIP_CACHE) {
+    return;
+  }
+
   const filePath = getCacheFilePath(key);
   try {
     await fs.writeFile(filePath, JSON.stringify(data), "utf-8");

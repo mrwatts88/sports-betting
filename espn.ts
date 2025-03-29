@@ -1,6 +1,7 @@
 import { getCachedData, saveToCache } from "./cache";
 
 const BASE_URL: string = "https://sports.core.api.espn.com/v2";
+const API_BASE_URL: string = "https://site.api.espn.com/apis/site/v2";
 
 export type League = "nba" | "nfl" | "mlb" | "nhl";
 export type Sport = "basketball" | "football" | "baseball" | "icehockey";
@@ -18,6 +19,10 @@ const leagueToSport = (league: League): Sport => {
     default:
       throw new Error(`Unsupported league: ${league}`);
   }
+};
+
+const summaryUrl = (league: League, eventId: string): string => {
+  return `${API_BASE_URL}/sports/${leagueToSport(league)}/${league}/summary?event=${eventId}`;
 };
 
 const competitionsUrl = (league: League, eventId: string): string => {
@@ -44,8 +49,8 @@ export const getOdds = async (
   homeMoneyLine: number;
   awayImpliedProbability: number;
   homeImpliedProbability: number;
-  awayTeamWon: boolean;
-  homeTeamWon: boolean;
+  //   awayTeamWon: boolean;
+  //   homeTeamWon: boolean;
 }> => {
   const cacheKey = `odds_${league}_${eventId}`;
   const cachedData = await getCachedData(cacheKey);
@@ -77,23 +82,23 @@ export const getOdds = async (
   const awayImpliedProbability: number = oddsToImpliedProbability(awayMoneyLine);
   const homeImpliedProbability: number = oddsToImpliedProbability(homeMoneyLine);
 
-  const awayTeamMoneyLineOutcome: string | undefined = item.awayTeamOdds?.current?.moneyLine?.outcome?.type;
-  const homeTeamMoneyLineOutcome: string | undefined = item.homeTeamOdds?.current?.moneyLine?.outcome?.type;
+  //   const awayTeamMoneyLineOutcome: string | undefined = item.awayTeamOdds?.current?.moneyLine?.outcome?.type;
+  //   const homeTeamMoneyLineOutcome: string | undefined = item.homeTeamOdds?.current?.moneyLine?.outcome?.type;
 
-  if (awayTeamMoneyLineOutcome === undefined || homeTeamMoneyLineOutcome === undefined) {
-    throw new Error("Money line outcome is not available");
-  }
+  //   if (awayTeamMoneyLineOutcome === undefined || homeTeamMoneyLineOutcome === undefined) {
+  //     throw new Error("Money line outcome is not available");
+  //   }
 
-  const awayTeamWon: boolean = awayTeamMoneyLineOutcome === "win";
-  const homeTeamWon: boolean = homeTeamMoneyLineOutcome === "win";
+  //   const awayTeamWon: boolean = awayTeamMoneyLineOutcome === "win";
+  //   const homeTeamWon: boolean = homeTeamMoneyLineOutcome === "win";
 
   const result = {
     awayMoneyLine,
     homeMoneyLine,
     awayImpliedProbability,
     homeImpliedProbability,
-    awayTeamWon,
-    homeTeamWon,
+    // awayTeamWon,
+    // homeTeamWon,
   };
 
   await saveToCache(cacheKey, result);
@@ -135,6 +140,51 @@ export const getPredictedProbability = async (
   const result = {
     awayTeamPredictedProbability: parseFloat(awayTeamPredictedProbability.toFixed(3)),
     homeTeamPredictedProbability: parseFloat(homeTeamPredictedProbability.toFixed(3)),
+  };
+
+  await saveToCache(cacheKey, result);
+  return result;
+};
+
+export const getResults = async (
+  league: League,
+  eventId: string
+): Promise<{
+  awayTeamWon: boolean;
+  homeTeamWon: boolean;
+}> => {
+  const cacheKey = `results_${league}_${eventId}`;
+  const cachedData = await getCachedData(cacheKey);
+  if (cachedData) {
+    return cachedData;
+  }
+
+  const url: string = summaryUrl(league, eventId);
+  const response: Response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch game summary: ${response.statusText}`);
+  }
+
+  const data: any = await response.json();
+  const competitors = data.header.competitions[0].competitors;
+  const awayTeam = competitors.find((team: any) => team.homeAway === "away");
+  const homeTeam = competitors.find((team: any) => team.homeAway === "home");
+
+  if (!awayTeam) {
+    throw new Error("Away team not found in the game summary");
+  }
+
+  if (!homeTeam) {
+    throw new Error("Home team not found in the game summary");
+  }
+
+  const awayTeamWon: boolean = awayTeam.winner === true;
+  const homeTeamWon: boolean = !awayTeamWon;
+
+  const result = {
+    awayTeamWon,
+    homeTeamWon,
   };
 
   await saveToCache(cacheKey, result);

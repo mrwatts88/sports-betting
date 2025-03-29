@@ -1,14 +1,7 @@
 import { initCache } from "./cache";
-import { getOdds, getPredictedProbability, League } from "./espn";
-
-const DISCREPENCY_THRESHOLD: number = 4;
-const BET_AMOUNT: number = 100;
-type FAV_OR_DOG_OR_BOTH = "favorite" | "underdog" | "both";
-const favOrDogOrBoth: FAV_OR_DOG_OR_BOTH = "both"; // Change this to "favorite" or "underdog" to only bet on favorites or underdogs
-type AWAY_OR_HOME_OR_BOTH = "away" | "home" | "both";
-const awayOrHomeOrBoth: AWAY_OR_HOME_OR_BOTH = "both"; // Change this to "away" or "home" to only bet on away or home teams
-type UPSET_OR_NOUPSET_OR_BOTH = "upset" | "noupset" | "both";
-const betUpset: UPSET_OR_NOUPSET_OR_BOTH = "noupset"; // Change this to "upset" to only bet on upsets, "noupset" to avoid betting on upsets
+import { getOdds, getPredictedProbability, getResults, League } from "./espn";
+import { DISCREPENCY_THRESHOLD, BET_AMOUNT, NUMBER_OF_GAMES_TO_ANALYZE, awayOrHomeOrBoth, favOrDogOrBoth, betUpset, SKIP_CACHE } from "./settings";
+import { wait } from "./utils";
 
 let bankroll: number = 0;
 let numberOfBets: number = 0;
@@ -63,38 +56,15 @@ const shouldBet = (isAway: boolean, impliedProbability: number, predictedProbabi
 };
 
 const analzyeGame = async (league: League, eventId: string): Promise<void> => {
-  const {
-    awayImpliedProbability,
-    homeImpliedProbability,
-    awayTeamWon,
-    homeTeamWon,
-    awayMoneyLine,
-    homeMoneyLine,
-  }: {
-    awayImpliedProbability: number;
-    homeImpliedProbability: number;
-    awayTeamWon: boolean;
-    homeTeamWon: boolean;
-    awayMoneyLine: number;
-    homeMoneyLine: number;
-  } = await getOdds(league, eventId);
-
+  const { awayImpliedProbability, homeImpliedProbability, awayMoneyLine, homeMoneyLine } = await getOdds(league, eventId);
   console.log("Moneyline: ", awayMoneyLine, homeMoneyLine);
   console.log("Implied:", awayImpliedProbability, homeImpliedProbability);
 
-  const {
-    awayTeamPredictedProbability,
-    homeTeamPredictedProbability,
-  }: {
-    awayTeamPredictedProbability: number;
-    homeTeamPredictedProbability: number;
-  } = await getPredictedProbability(league, eventId);
-
+  const { awayTeamPredictedProbability, homeTeamPredictedProbability } = await getPredictedProbability(league, eventId);
   console.log("Predicted:", awayTeamPredictedProbability, homeTeamPredictedProbability);
 
   const shouldBetAway = shouldBet(true, awayImpliedProbability, awayTeamPredictedProbability, awayMoneyLine);
   const shouldBetHome = shouldBet(false, homeImpliedProbability, homeTeamPredictedProbability, homeMoneyLine);
-
   console.log("Should bet:", shouldBetAway, shouldBetHome);
 
   if (shouldBetAway || shouldBetHome) {
@@ -102,6 +72,8 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
   }
 
   if (shouldBetAway) {
+    const { awayTeamWon } = await getResults(league, eventId);
+
     if (awayTeamWon) {
       const winAmount: number = betAmountToWin(BET_AMOUNT, awayMoneyLine);
       bankroll += winAmount;
@@ -112,6 +84,8 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
       console.log("Away team lost! Bankroll decreased by bet amount.");
     }
   } else if (shouldBetHome) {
+    const { homeTeamWon } = await getResults(league, eventId);
+
     if (homeTeamWon) {
       const winAmount: number = betAmountToWin(BET_AMOUNT, homeMoneyLine);
       bankroll += winAmount;
@@ -126,14 +100,19 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
 
 (async (): Promise<void> => {
   await initCache();
-  const startingGameId: string = "401705636";
+  //   const startingGameId: string = "401705636"; // 2025
+  // const startingGameId: string = "401585814"; // 2024
+  const startingGameId: string = "401469371"; // 2023
 
-  for (let i: number = 0; i < 1000; i++) {
+  for (let i: number = 0; i < NUMBER_OF_GAMES_TO_ANALYZE; i++) {
     const gameId: number = parseInt(startingGameId) - i;
     console.log(`Game ${gameId}`);
     try {
+      //   if (SKIP_CACHE) {
+      await wait(750);
+      //   }
+
       await analzyeGame("nba", gameId.toString());
-      //   await wait(750);
     } catch (error: unknown) {
       console.error("Error analyzing game:", error);
     }
