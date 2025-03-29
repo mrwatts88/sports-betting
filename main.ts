@@ -1,7 +1,17 @@
 import { initCache } from "./cache";
 import { getOdds, getPredictedProbability, getResults, League } from "./espn";
-import { DISCREPENCY_THRESHOLD, BET_AMOUNT, NUMBER_OF_GAMES_TO_ANALYZE, awayOrHomeOrBoth, favOrDogOrBoth, betUpset, SKIP_CACHE } from "./settings";
-import { wait } from "./utils";
+import {
+  DISCREPENCY_THRESHOLD,
+  BET_AMOUNT,
+  NUMBER_OF_GAMES_TO_ANALYZE,
+  awayOrHomeOrBoth,
+  favOrDogOrBoth,
+  betUpset,
+  //   SKIP_CACHE,
+  LEAGUE,
+  STARTING_GAME_ID,
+} from "./settings";
+// import { wait } from "./utils";
 
 let bankroll: number = 0;
 let numberOfBets: number = 0;
@@ -18,36 +28,30 @@ const betAmountToWin = (betAmount: number, moneyLine: number): number => {
 };
 
 const shouldBet = (isAway: boolean, impliedProbability: number, predictedProbability: number, moneyLine: number): boolean => {
-  // @ts-ignore
   if (awayOrHomeOrBoth === "away" && !isAway) {
     return false; // Only bet on away teams
   }
 
-  // @ts-ignore
   if (awayOrHomeOrBoth === "home" && isAway) {
     return false; // Only bet on home teams
   }
 
   const isUpset = predictedProbability > 50 && impliedProbability < 50;
 
-  // @ts-ignore
   if (betUpset === "upset" && !isUpset) {
     return false; // Only bet on upsets if we're allowed to
   }
 
-  // @ts-ignore
   if (betUpset === "noupset" && isUpset) {
     return false; // Don't bet on upsets if we're avoiding them
   }
 
   const discrepancy: number = predictedProbability - impliedProbability;
 
-  // @ts-ignore
   if (favOrDogOrBoth === "favorite" && moneyLine > 0) {
     return false; // Don't bet on underdogs if we're only betting favorites
   }
 
-  // @ts-ignore
   if (favOrDogOrBoth === "underdog" && moneyLine < 0) {
     return false; // Don't bet on favorites if we're only betting underdogs
   }
@@ -55,7 +59,7 @@ const shouldBet = (isAway: boolean, impliedProbability: number, predictedProbabi
   return discrepancy >= DISCREPENCY_THRESHOLD && discrepancy > 0;
 };
 
-const analzyeGame = async (league: League, eventId: string): Promise<void> => {
+const analyzeGame = async (league: League, eventId: string): Promise<void> => {
   const { awayImpliedProbability, homeImpliedProbability, awayMoneyLine, homeMoneyLine } = await getOdds(league, eventId);
   console.log("Moneyline: ", awayMoneyLine, homeMoneyLine);
   console.log("Implied:", awayImpliedProbability, homeImpliedProbability);
@@ -100,9 +104,7 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
 
 (async (): Promise<void> => {
   await initCache();
-  //   const startingGameId: string = "401705636"; // 2025
-  //   const startingGameId: string = "401585814"; // 2024
-  const startingGameId: string = "401469371"; // 2023
+  const startingGameId: string = STARTING_GAME_ID;
 
   for (let i: number = 0; i < NUMBER_OF_GAMES_TO_ANALYZE; i++) {
     const gameId: number = parseInt(startingGameId) - i;
@@ -112,13 +114,16 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
       //   await wait(750);
       //   }
 
-      await analzyeGame("nba", gameId.toString());
+      await analyzeGame(LEAGUE, gameId.toString());
     } catch (error: unknown) {
       console.error("Error analyzing game:", error);
     }
     console.log("Current bankroll:", bankroll.toFixed(2));
     console.log("---------------------");
   }
+
+  const totalBet = numberOfBets * BET_AMOUNT;
+  const roi = ((bankroll / totalBet) * 100).toFixed(2);
 
   console.log("Away or Home:", awayOrHomeOrBoth);
   console.log("Favorite or Underdog:", favOrDogOrBoth);
@@ -127,7 +132,5 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
   console.log("Final bankroll:", bankroll.toFixed(2));
   console.log("Number of bets placed:", numberOfBets);
   console.log("Number of bets won:", numberOfBetsWon);
-  const totalBet = numberOfBets * BET_AMOUNT;
-  const roi = ((bankroll / totalBet) * 100).toFixed(2);
   console.log("ROI:", roi, "%");
 })();
