@@ -1,0 +1,16 @@
+{
+  "name": "sports-betting",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx tsx main.ts",
+    "test": "npx tsx espn.test.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "@types/node": "^22.13.14"
+  }
+}
