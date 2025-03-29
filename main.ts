@@ -11,7 +11,7 @@ import {
   LEAGUE,
   STARTING_GAME_ID,
 } from "./settings";
-// import { wait } from "./utils";
+import { wait } from "./utils";
 
 let bankroll: number = 0;
 let numberOfBets: number = 0;
@@ -75,9 +75,9 @@ const analyzeGame = async (league: League, eventId: string): Promise<void> => {
     numberOfBets++;
   }
 
-  if (shouldBetAway) {
-    const { awayTeamWon } = await getResults(league, eventId);
+  const { awayTeamWon, homeTeamWon } = await getResults(league, eventId);
 
+  if (shouldBetAway) {
     if (awayTeamWon) {
       const winAmount: number = betAmountToWin(BET_AMOUNT, awayMoneyLine);
       bankroll += winAmount;
@@ -88,8 +88,6 @@ const analyzeGame = async (league: League, eventId: string): Promise<void> => {
       console.log("Away team lost! Bankroll decreased by bet amount.");
     }
   } else if (shouldBetHome) {
-    const { homeTeamWon } = await getResults(league, eventId);
-
     if (homeTeamWon) {
       const winAmount: number = betAmountToWin(BET_AMOUNT, homeMoneyLine);
       bankroll += winAmount;
@@ -111,7 +109,7 @@ const analyzeGame = async (league: League, eventId: string): Promise<void> => {
     console.log(`Game ${gameId}`);
     try {
       //   if (SKIP_CACHE) {
-      //   await wait(750);
+      //   await wait(250);
       //   }
 
       await analyzeGame(LEAGUE, gameId.toString());
