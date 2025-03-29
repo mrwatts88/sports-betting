@@ -5,7 +5,7 @@ export type AWAY_OR_HOME_OR_BOTH = "away" | "home" | "both";
 export type UPSET_OR_NOUPSET_OR_BOTH = "upset" | "noupset" | "both";
 
 export const LEAGUE: League = "nba" as League;
-export const YEAR: number = 2024;
+export const YEAR: number = 2023;
 export const DISCREPENCY_THRESHOLD: number = 5;
 export const NUMBER_OF_GAMES_TO_ANALYZE: number = 1000;
 export const BET_AMOUNT: number = 100;
