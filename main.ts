@@ -101,7 +101,7 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
 (async (): Promise<void> => {
   await initCache();
   //   const startingGameId: string = "401705636"; // 2025
-  // const startingGameId: string = "401585814"; // 2024
+  //   const startingGameId: string = "401585814"; // 2024
   const startingGameId: string = "401469371"; // 2023
 
   for (let i: number = 0; i < NUMBER_OF_GAMES_TO_ANALYZE; i++) {
@@ -109,7 +109,7 @@ const analzyeGame = async (league: League, eventId: string): Promise<void> => {
     console.log(`Game ${gameId}`);
     try {
       //   if (SKIP_CACHE) {
-      await wait(750);
+      //   await wait(750);
       //   }
 
       await analzyeGame("nba", gameId.toString());
